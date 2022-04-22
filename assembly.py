@@ -24,7 +24,7 @@ MOVW AL R2, 0x0000
 MOVT AL R2, 0x0020
 STR AL R2, (R3)
 MOVW AL R5, 0xC3500
-MOVT AL r5, 0xC
+MOVT AL R5, 0xC
 SUB S R5, R5, 1
 B PL 0xFFFFFD
 ADD AL R3, R4, 28
@@ -32,7 +32,7 @@ MOVW AL R2, 0x0000
 MOVT AL R2, 0x0020
 STR AL R2, (R3)
 MOVW AL R5, 0xC3500
-MOVT AL R5,0xC
+MOVT AL R5, 0xC
 SUB S R5, R5, 1
 B PL 0xFFFFFD
 (add branch to go back 24)
@@ -118,19 +118,19 @@ class Assembler():
             if(command == ""):
                 print('blank command')
             
-            if("MOVW" in command):
-                self.MOVW(command)
+            # if("MOVW" in command):
+            #     self.MOVW(command)
             # if("MOVT" in command):
             #     self.MOVT(command)
-            # if("ADD" in command):
-            #     self.ADD(command)
+            if("ADD" in command):
+                self.ADD(command)
             # if("LDR"in command):
             #     self.LDR(command)
             # if("ORR" in command):
             #     self.ORR(command)
             # if("STR" in command):
             #     self.STR(command)
-            # if("SUBS" in command):
+            # if("SUB" in command):
             #     self.SUBS(command)
 
 
@@ -144,7 +144,7 @@ class Assembler():
 
         # convert string into each word
         splitCommands = self.splitCommand(command)
-        print(splitCommands)
+        # print(splitCommands)
 
         con = self.splitCondition(self.conditionCodes[splitCommands[1]])
 
@@ -154,25 +154,71 @@ class Assembler():
         hexValue =str(hexValue)
         
         imm4 = hexValue[0:4]
-        print(imm4)
+        
         imm12 = hexValue[4:16]
-        print(imm12)
+        
 
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
 
         
         
-        binaryValue = f'{con} 0011 0000 {imm4} {rd} {imm12} \n'
-        print(binaryValue)
+        binaryValue = f'{con}00110000{imm4}{rd}{imm12}'
+        self.FinalBinary.append(binaryValue)
         
 
 
         
     def MOVT(self,command):
+        con='0000';
+        imm4='0000'
+        rd='rR'
+        imm12 ='0000'
+
+        # convert string into each word
+        splitCommands = self.splitCommand(command)
+
+        con = self.splitCondition(self.conditionCodes[splitCommands[1]])
+
+        # print(splitCommands[-1])
+        # get hex value and assign to either imm4 or imm12
+        hexValue = self.hexToBinary(splitCommands[-1])
+        hexValue =str(hexValue)
+        
+        imm4 = hexValue[0:4]
+        
+        imm12 = hexValue[4:16]
+        
+
+        rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
+
+        binaryValue = f'{con} 0011 0100 {imm4} {rd} {imm12}'
+        self.FinalBinary.append(binaryValue)
+
+
         print(command)
 
     def ADD(self,command):
+        con='0000'
+        opCode=self.dataProcessing["ADD"]
+        imm4='0000'
+        rd='rR'
+        rn='rn'
+        imm12 ='0000'
+        immO='1'
+        s=''
+
+        splitCommands = self.splitCommand(command)
         print(command)
+        con = self.splitCondition(self.conditionCodes[splitCommands[1]])
+        
+        print(str(splitCommands[0]))
+        print(bin(self.dataProcessing[str(splitCommands[0])]))
+        opCode = self.getOpCode(self.dataProcessing[splitCommands[0]])
+        print(opCode)
+
+        binaryValue = f'{con} 00{immO} {opCode} {s} {rn} {rd} {imm12} '
+
+        
 
     def LDR(self,command):
         print(command)
@@ -212,9 +258,15 @@ class Assembler():
         return value[0:16].zfill(16)
     
     def getRegisterBinary(self,register):
-        
         regNumber = int(register)
         return bin(regNumber)[2:].zfill(4)
+
+    def getOpCode(self,code):
+        print(code)
+        binaryStr = bin(code)
+        print(binaryStr)
+        binaryStr = binaryStr.split('0b')
+        return binaryStr[1]
 
 
 
