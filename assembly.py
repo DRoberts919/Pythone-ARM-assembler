@@ -18,7 +18,7 @@ MOVW AL R4, 0x0000
 MOVT AL R4, 0x3F20
 ADD AL R2, R4, 0x08
 LDR AL R3, R2,
-ORR AL R3, R3, 0x00000008
+ORR AL R3, R3, 0x000008
 STR AL R3, R2,
 ADD AL R3, R4, 0x1c
 MOVW AL R2, 0x0000
@@ -175,7 +175,7 @@ class Assembler():
         numberValue = int(binaryValue.replace(' ',''),2)
         byt = numberValue.to_bytes(4,'little')
         # print(binaryValue)
-        self.FinalBinary.extend(byt)
+        self.FinalBinary.append(byt)
         
     def MOVT(self,command):
         con='0000';
@@ -204,7 +204,7 @@ class Assembler():
         num = int(binaryValue.replace(' ',''),2)
         byt = num.to_bytes(4,'little')
 
-        self.FinalBinary.extend(byt)
+        self.FinalBinary.append(byt)
 
     def dataProcess(self,command):
         con='0000'
@@ -253,7 +253,7 @@ class Assembler():
         num = int(binaryValue.replace(' ',''),2)
         byt = num.to_bytes(4,'little')
         # print(binaryValue)
-        self.FinalBinary.extend(byt)
+        self.FinalBinary.append(byt)
 
     def dataTransfer(self,command):
         con = "0000"
@@ -279,8 +279,8 @@ class Assembler():
         binaryValue = f'{con} 01{i}0 000{LorS} {rn} {rd} {imm12}'
         num = int(binaryValue.replace(" ", ""),2)
         byt = num.to_bytes(4,'little')
-        # print(binaryValue)
-        self.FinalBinary.extend(byt)
+        print(byt)
+        self.FinalBinary.append(byt)
     
     def B(self,command):
         con =''
@@ -298,7 +298,7 @@ class Assembler():
         binayrValue = f'{con} 101{L} {imm24}'
         num = int(binayrValue.replace(' ',''),2)
         byt = num.to_bytes(4,'little')
-        self.FinalBinary.extend(byt)
+        self.FinalBinary.append(byt)
 
 
 # helper methods for getting info
@@ -332,13 +332,16 @@ class Assembler():
         return binaryStr[1]
 
 
+def main():
+    assembleBot = Assembler(ARMInstructions)
+    assembleBot.createBinary()
+    print(assembleBot.FinalBinary)
+
+    with open("kernel7.img", "wb") as binary_file:
+        for command in assembleBot.FinalBinary:
+            binary_file.write(command)
+    binary_file.close()
+
+main()
 
 
-assembleBot = Assembler(ARMInstructions)
-
-# assembleBot.createInstructionSet()
-assembleBot.createBinary()
-
-# assembleBot.printInstructions()
-
-print(assembleBot.FinalBinary)
