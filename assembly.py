@@ -7,7 +7,8 @@ from multiprocessing import Condition
 import opcode
 from pickletools import long1
 from posixpath import split
-from numpy import int0
+from textwrap import fill
+from numpy import byte, int0
 
 from setuptools import Command
 
@@ -16,26 +17,27 @@ ARMInstructions = """
 MOVW AL R4, 0x0000
 MOVT AL R4, 0x3F20
 ADD AL R2, R4, 0x08
-LDR AL R3,(R2)
+LDR AL R3, R2,
 ORR AL R3, R3, 0x00000008
-STR AL R3, (R2)
+STR AL R3, R2,
 ADD AL R3, R4, 0x1c
 MOVW AL R2, 0x0000
 MOVT AL R2, 0x0020
-STR AL R2, (R3)
+STR AL R2, R3,
 MOVW AL R5, 0xC3500
 MOVT AL R5, 0xC
-SUB S R5, R5, 1
-B PL 0xFFFFFD
+SUB AL S R5, R5, 1
+BR PL 0xFFFFFD
 ADD AL R3, R4, 28
 MOVW AL R2, 0x0000
 MOVT AL R2, 0x0020
-STR AL R2, (R3)
+STR AL R2, R3,
 MOVW AL R5, 0xC3500
 MOVT AL R5, 0xC
-SUB S R5, R5, 1
-B PL 0xFFFFFD
+SUB AL S R5, R5, 1
+BR PL 0xFFFFFD
 (add branch to go back 24)
+BR AL 0xFFFFE8
 """
 
 class Assembler():
@@ -63,6 +65,7 @@ class Assembler():
             "CS": 0b0010,
             "NE": 0b0001,
             "EQ": 0b0000,
+            "S": 0b0
         }
         self.dataProcessing = {
             'AND': 0b1000,
@@ -81,7 +84,7 @@ class Assembler():
             'MOV': 0b1101,
             'BIC': 0b1110,
             'MVN': 0b1111,
-            'B': 0b101,
+            'BRa': 0b101,
         }
         self.singleDataTransfer = {
             'LDR': 0b01000001,
@@ -107,8 +110,10 @@ class Assembler():
                     
 
     def printInstructions(self):
-        for i in self.instructions:
+        for i in self.FinalBinary:
+            print("finally Binary")
             print(i)
+            print('\n')
 
     def createBinary(self):
         self.createInstructionSet()
@@ -118,20 +123,22 @@ class Assembler():
             if(command == ""):
                 print('blank command')
             
-            # if("MOVW" in command):
-            #     self.MOVW(command)
-            # if("MOVT" in command):
-            #     self.MOVT(command)
+            if("MOVW" in command):
+                self.MOVW(command)
+            if("MOVT" in command):
+                self.MOVT(command)
             if("ADD" in command):
-                self.ADD(command)
-            # if("LDR"in command):
-            #     self.LDR(command)
-            # if("ORR" in command):
-            #     self.ORR(command)
-            # if("STR" in command):
-            #     self.STR(command)
-            # if("SUB" in command):
-            #     self.SUBS(command)
+                self.dataProcess(command)
+            if("LDR"in command):
+                self.dataTransfer(command)
+            if("STR" in command):
+                self.dataTransfer(command)
+            if("ORR" in command):
+                self.dataProcess(command)
+            if("SUB" in command):
+                self.dataProcess(command)
+            if("BR" in command):
+                self.B(command)
 
 
             
@@ -150,8 +157,9 @@ class Assembler():
 
         # print(splitCommands[-1])
         # get hex value and assign to either imm4 or imm12
-        hexValue = self.hexToBinary(splitCommands[-1])
+        hexValue = self.hexToBinary(splitCommands[-1],16)
         hexValue =str(hexValue)
+        # print(hexValue)
         
         imm4 = hexValue[0:4]
         
@@ -162,11 +170,12 @@ class Assembler():
 
         
         
-        binaryValue = f'{con}00110000{imm4}{rd}{imm12}'
-        self.FinalBinary.append(binaryValue)
-        
+        binaryValue = f'{con} 0011 0000 {imm4} {rd} {imm12}'
 
-
+        numberValue = int(binaryValue.replace(' ',''),2)
+        byt = numberValue.to_bytes(4,'little')
+        # print(binaryValue)
+        self.FinalBinary.extend(byt)
         
     def MOVT(self,command):
         con='0000';
@@ -181,7 +190,7 @@ class Assembler():
 
         # print(splitCommands[-1])
         # get hex value and assign to either imm4 or imm12
-        hexValue = self.hexToBinary(splitCommands[-1])
+        hexValue = self.hexToBinary(splitCommands[-1],16)
         hexValue =str(hexValue)
         
         imm4 = hexValue[0:4]
@@ -192,12 +201,12 @@ class Assembler():
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
 
         binaryValue = f'{con} 0011 0100 {imm4} {rd} {imm12}'
-        self.FinalBinary.append(binaryValue)
+        num = int(binaryValue.replace(' ',''),2)
+        byt = num.to_bytes(4,'little')
 
+        self.FinalBinary.extend(byt)
 
-        print(command)
-
-    def ADD(self,command):
+    def dataProcess(self,command):
         con='0000'
         opCode=self.dataProcessing["ADD"]
         imm4='0000'
@@ -206,34 +215,90 @@ class Assembler():
         imm12 ='0000'
         immO='1'
         s=''
+        rpoint = 0
+        dpoint = 0
 
         splitCommands = self.splitCommand(command)
-        print(command)
+        # print(command)
+
+        if("S" in command):
+            s ='1'
+            rpoint = 4
+            dpoint = 3
+        else:
+            s='0'
+            dpoint = 2
+            rpoint = 3
+        
         con = self.splitCondition(self.conditionCodes[splitCommands[1]])
         
-        print(str(splitCommands[0]))
-        print(bin(self.dataProcessing[str(splitCommands[0])]))
-        opCode = self.getOpCode(self.dataProcessing[splitCommands[0]])
-        print(opCode)
-
-        binaryValue = f'{con} 00{immO} {opCode} {s} {rn} {rd} {imm12} '
+        opCode = self.getOpCode(self.dataProcessing[splitCommands[0]]).zfill(4)
+        # print(opCode)
 
         
 
-    def LDR(self,command):
-        print(command)
-    
-    def ORR(self,command):
-        print(command)
+        rn = self.getRegisterBinary(splitCommands[rpoint].replace('R',"").replace(",",""))
+        # print("RN " +rn)
+        rd = self.getRegisterBinary(splitCommands[dpoint].replace('R',"").replace(",",""))
+        # print("RD "+rd)
 
-    def STR(self,command):
-        print(command)
-    
-    def SUBS(self,command):
-        print(command)
+        hexValue = self.hexToBinary(splitCommands[-1],12)
+        hexValue =str(hexValue)
+
+        # print(hexValue)
+        imm12 = hexValue
+        
+
+        binaryValue = f'{con} 00{immO} {opCode} {s} {rn} {rd} {imm12}'
+        num = int(binaryValue.replace(' ',''),2)
+        byt = num.to_bytes(4,'little')
+        # print(binaryValue)
+        self.FinalBinary.extend(byt)
+
+    def dataTransfer(self,command):
+        con = "0000"
+        i='0'
+        LorS =''
+        rn=""
+        rd=""
+        imm12='0000 0000 0100'
+
+        splitCommands = self.splitCommand(command)
+        con = self.splitCondition(self.conditionCodes[splitCommands[1]])
+
+        if("LDR" in command):
+            LorS ='1'
+        if("STR" in command):
+            Lors = '0'
+
+        rn = self.getRegisterBinary(splitCommands[3].replace('R',"").replace(",",""))
+        # print("RN " +rn)
+        rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
+        # print("RD "+rd)
+
+        binaryValue = f'{con} 01{i}0 000{LorS} {rn} {rd} {imm12}'
+        num = int(binaryValue.replace(" ", ""),2)
+        byt = num.to_bytes(4,'little')
+        # print(binaryValue)
+        self.FinalBinary.extend(byt)
     
     def B(self,command):
-        print(command)
+        con =''
+        L = '0'
+        imm24 =''
+
+        splitCommands = self.splitCommand(command)
+        # print(splitCommands)
+        con = self.splitCondition(self.conditionCodes[splitCommands[1]]).zfill(4)
+
+        # print(con)
+
+        imm24 = self.hexToBinary(splitCommands[-1],24)
+        # print(imm24) 
+        binayrValue = f'{con} 101{L} {imm24}'
+        num = int(binayrValue.replace(' ',''),2)
+        byt = num.to_bytes(4,'little')
+        self.FinalBinary.extend(byt)
 
 
 # helper methods for getting info
@@ -247,7 +312,7 @@ class Assembler():
         binaryStr = binaryStr.split('0b')
         return binaryStr[1]
     
-    def hexToBinary(self,hexNum):
+    def hexToBinary(self,hexNum,fillVal):
         # print("hexNum  " + hexNum)
         hexValue =int(hexNum,16)
         # print("hexValue:  " + str(hexValue))
@@ -255,16 +320,14 @@ class Assembler():
         # print(bin(int(binaryValue,16))[2:16].zfill(16))
         value=bin(int(binaryValue,16))[2:]
         # print(value[0:16].zfill(16))
-        return value[0:16].zfill(16)
+        return value[0:fillVal].zfill(fillVal)
     
     def getRegisterBinary(self,register):
         regNumber = int(register)
         return bin(regNumber)[2:].zfill(4)
 
     def getOpCode(self,code):
-        print(code)
         binaryStr = bin(code)
-        print(binaryStr)
         binaryStr = binaryStr.split('0b')
         return binaryStr[1]
 
@@ -275,3 +338,7 @@ assembleBot = Assembler(ARMInstructions)
 
 # assembleBot.createInstructionSet()
 assembleBot.createBinary()
+
+# assembleBot.printInstructions()
+
+print(assembleBot.FinalBinary)
