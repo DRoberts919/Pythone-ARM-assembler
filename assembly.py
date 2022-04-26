@@ -36,15 +36,14 @@ MOVW AL R5, 0xC3500
 MOVT AL R5, 0xC
 SUB AL S R5, R5, 1
 BR PL 0xFFFFFD
-(add branch to go back 24)
 BR AL 0xFFFFE8
 """
 
 class Assembler():
 
     def __init__(self,instuctions):
-        self.instructions = instuctions
-        self.instructionSet = []
+        # self.instructions = instuctions
+        self.instructionSet = instuctions
         self.command = ""
         self.binary = ""
         self.FinalBinary =[]
@@ -97,17 +96,16 @@ class Assembler():
         }
         
 
-    def createInstructionSet(self):
-        for letter in self.instructions:
+    # def createInstructionSet(self):
+    #     for letter in self.instructions:
             
-            if letter == "\n":
-                self.instructionSet.append(self.command)
-                self.command =""
+    #         if letter == "\n":
+    #             self.instructionSet.append(self.command)
+    #             self.command =""
                     
-            else:
-                self.command += letter
-        # print(self.instructionSet)            
-                    
+    #         else:
+    #             self.command += letter
+    #     # print(self.instructionSet)            
 
     def printInstructions(self):
         for i in self.FinalBinary:
@@ -116,7 +114,7 @@ class Assembler():
             print('\n')
 
     def createBinary(self):
-        self.createInstructionSet()
+        # self.createInstructionSet()
 
         for command in self.instructionSet:
             
@@ -262,21 +260,25 @@ class Assembler():
         rn=""
         rd=""
         imm12='0000 0000 0100'
+        prePOST = ''
 
         splitCommands = self.splitCommand(command)
         con = self.splitCondition(self.conditionCodes[splitCommands[1]])
 
         if("LDR" in command):
             LorS ='1'
+            prePOST ='1'
         if("STR" in command):
-            Lors = '0'
+            LorS = '0'
+            prePOST = '0'
+
 
         rn = self.getRegisterBinary(splitCommands[3].replace('R',"").replace(",",""))
         # print("RN " +rn)
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
         # print("RD "+rd)
 
-        binaryValue = f'{con} 01{i}0 000{LorS} {rn} {rd} {imm12}'
+        binaryValue = f'{con} 01{i}{prePOST} 000{LorS} {rn} {rd} {imm12}'
         num = int(binaryValue.replace(" ", ""),2)
         byt = num.to_bytes(4,'little')
         print(byt)
@@ -333,7 +335,14 @@ class Assembler():
 
 
 def main():
-    assembleBot = Assembler(ARMInstructions)
+    commands =''''''
+
+    with open('commands.txt','r') as command_file:
+        commands = command_file.read().split("\n")
+        print(commands)
+
+
+    assembleBot = Assembler(commands)
     assembleBot.createBinary()
     print(assembleBot.FinalBinary)
 
