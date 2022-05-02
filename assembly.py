@@ -94,18 +94,7 @@ class Assembler():
             'MOVW': 0b00110000,
             'MOVT': 0b00110100
         }
-        
-
-    # def createInstructionSet(self):
-    #     for letter in self.instructions:
-            
-    #         if letter == "\n":
-    #             self.instructionSet.append(self.command)
-    #             self.command =""
-                    
-    #         else:
-    #             self.command += letter
-    #     # print(self.instructionSet)            
+                  
 
     def printInstructions(self):
         for i in self.FinalBinary:
@@ -115,7 +104,6 @@ class Assembler():
 
     def createBinary(self):
         # self.createInstructionSet()
-
         for command in self.instructionSet:
             
             if(command == ""):
