@@ -1,44 +1,4 @@
 
-# list of conditionals
-
-from atexit import register
-from dataclasses import replace
-from multiprocessing import Condition
-import opcode
-from pickletools import long1
-from posixpath import split
-from textwrap import fill
-from numpy import byte, int0
-
-from setuptools import Command
-
-
-# ARMInstructions = """
-# MOVW AL R4, 0x0000
-# MOVT AL R4, 0x3F20
-# ADD AL R2, R4, 0x08
-# LDR AL R3, R2,
-# ORR AL R3, R3, 0x000008
-# STR AL R3, R2,
-# ADD AL R3, R4, 0x1c
-# MOVW AL R2, 0x0000
-# MOVT AL R2, 0x0020
-# STR AL R2, R3,
-# MOVW AL R5, 0xC3500
-# MOVT AL R5, 0xC
-# SUB AL S R5, R5, 1
-# BR PL 0xFFFFFD
-# ADD AL R3, R4, 28
-# MOVW AL R2, 0x0000
-# MOVT AL R2, 0x0020
-# STR AL R2, R3,
-# MOVW AL R5, 0xC3500
-# MOVT AL R5, 0xC
-# SUB AL S R5, R5, 1
-# BR PL 0xFFFFFD
-# BR AL 0xFFFFE8
-# """
-
 class Assembler():
 
     def __init__(self,instuctions):
@@ -94,7 +54,6 @@ class Assembler():
             'MOVW': 0b00110000,
             'MOVT': 0b00110100
         }
-                  
 
     def printInstructions(self):
         for i in self.FinalBinary:
@@ -104,10 +63,10 @@ class Assembler():
 
     def createBinary(self):
         # self.createInstructionSet()
-        for command in self.instructionSet:
+        for index, command in enumerate( self.instructionSet):
             
-            if(command == ""):
-                print('blank command')
+            if(command == "" or command ==' '):
+                continue
             
             if("MOVW" in command):
                 self.MOVW(command)
@@ -124,7 +83,9 @@ class Assembler():
             if("SUB" in command):
                 self.dataProcess(command)
             if("BR" in command):
-                self.B(command)
+                self.B(command,index)
+            if("BX" in command):
+                self.branchEx(command)
 
 
             
@@ -154,12 +115,9 @@ class Assembler():
 
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
 
-        
-        
         binaryValue = f'{con} 0011 0000 {imm4} {rd} {imm12}'
 
-        numberValue = int(binaryValue.replace(' ',''),2)
-        byt = numberValue.to_bytes(4,'little')
+        byt = self.convertToByteArray(binaryValue)
         # print(binaryValue)
         self.FinalBinary.append(byt)
         
@@ -187,8 +145,7 @@ class Assembler():
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
 
         binaryValue = f'{con} 0011 0100 {imm4} {rd} {imm12}'
-        num = int(binaryValue.replace(' ',''),2)
-        byt = num.to_bytes(4,'little')
+        byt = self.convertToByteArray(binaryValue)
 
         self.FinalBinary.append(byt)
 
@@ -219,9 +176,6 @@ class Assembler():
         con = self.splitCondition(self.conditionCodes[splitCommands[1]])
         
         opCode = self.getOpCode(self.dataProcessing[splitCommands[0]]).zfill(4)
-        # print(opCode)
-
-        
 
         rn = self.getRegisterBinary(splitCommands[rpoint].replace('R',"").replace(",",""))
         # print("RN " +rn)
@@ -236,8 +190,7 @@ class Assembler():
         
 
         binaryValue = f'{con} 00{immO} {opCode} {s} {rn} {rd} {imm12}'
-        num = int(binaryValue.replace(' ',''),2)
-        byt = num.to_bytes(4,'little')
+        byt = self.convertToByteArray(binaryValue)
         # print(binaryValue)
         self.FinalBinary.append(byt)
 
@@ -260,35 +213,62 @@ class Assembler():
             LorS = '0'
             prePOST = '0'
 
-
         rn = self.getRegisterBinary(splitCommands[3].replace('R',"").replace(",",""))
         # print("RN " +rn)
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
         # print("RD "+rd)
 
         binaryValue = f'{con} 01{i}{prePOST} 000{LorS} {rn} {rd} {imm12}'
-        num = int(binaryValue.replace(" ", ""),2)
-        byt = num.to_bytes(4,'little')
+        byt = self.convertToByteArray(binaryValue)
+        
         print(byt)
         self.FinalBinary.append(byt)
     
-    def B(self,command):
+    def B(self,command,index):
         con =''
         L = '0'
         imm24 =''
 
         splitCommands = self.splitCommand(command)
         # print(splitCommands)
+        
+        if(splitCommands[2].startswith(':')):
+            imm24 = self.getBranchDistance(splitCommands[2],index)
+        else:
+            imm24 = self.hexToBinary(splitCommands[-1],24)
+
         con = self.splitCondition(self.conditionCodes[splitCommands[1]]).zfill(4)
+        
+        if(splitCommands[0] == "BRL"):
+            L = "1"
+        else:
+            L="0"
 
-        # print(con)
-
-        imm24 = self.hexToBinary(splitCommands[-1],24)
         # print(imm24) 
         binayrValue = f'{con} 101{L} {imm24}'
-        num = int(binayrValue.replace(' ',''),2)
-        byt = num.to_bytes(4,'little')
+        
+        byt = self.convertToByteArray(binayrValue)
         self.FinalBinary.append(byt)
+    
+    def branchEx(self,command):
+        con ="0000"
+        rn = '0000'
+
+        splitCommands = self.splitCommand(command)
+
+        con = self.splitCondition(self.conditionCodes[splitCommands[1]]).zfill(4)
+
+        if( splitCommands[-1] == "LR"):
+            rn = self.getRegisterBinary("14")
+        else:
+            rn = self.getRegisterBinary(splitCommands[3].replace('R',"").replace(",",""))
+
+        finalyBinary = f'{con} 0001 0010 1111 1111 1111 0001 {rn}'
+
+        byt = self.convertToByteArray(finalyBinary)
+        self.FinalBinary.append(byt)
+
+
 
 
 # helper methods for getting info
@@ -321,6 +301,28 @@ class Assembler():
         binaryStr = binaryStr.split('0b')
         return binaryStr[1]
 
+    def convertToByteArray(self,code):
+        num = int(code.replace(' ',''),2)
+        byt = num.to_bytes(4,'little')
+        return byt
+    
+    def getBranchDistance(self,label,index):
+        decrement = 0
+        subRoutine = 0
+        branch = 0
+
+        for i, command in enumerate(self.instructionSet):
+            if command.startswith(f':{label}') or command == '':
+                decrement += 1
+            if command.startswith(label):
+                subRoutine = (i-decrement) - index
+                branch = subRoutine - 2
+        # print(branch)
+
+        binry = bin(branch)[2:].zfill(24)
+        
+        return binry
+
 
 def main():
     commands =''''''
@@ -328,7 +330,6 @@ def main():
     with open('commands.txt','r') as command_file:
         commands = command_file.read().split("\n")
         print(commands)
-
 
     assembleBot = Assembler(commands)
     assembleBot.createBinary()
@@ -338,7 +339,6 @@ def main():
         for command in assembleBot.FinalBinary:
             binary_file.write(command)
     binary_file.close()
-
 main()
 
 
