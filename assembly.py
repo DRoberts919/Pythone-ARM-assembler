@@ -99,20 +99,12 @@ class Assembler():
         # convert string into each word
         splitCommands = self.splitCommand(command)
         # print(splitCommands)
-
         con = self.splitCondition(self.conditionCodes[splitCommands[1]])
-
-        # print(splitCommands[-1])
         # get hex value and assign to either imm4 or imm12
         hexValue = self.hexToBinary(splitCommands[-1],16)
-        hexValue =str(hexValue)
-        # print(hexValue)
-        
-        imm4 = hexValue[0:4]
-        
+        hexValue =str(hexValue)  
+        imm4 = hexValue[0:4]       
         imm12 = hexValue[4:16]
-        
-
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
 
         binaryValue = f'{con} 0011 0000 {imm4} {rd} {imm12}'
