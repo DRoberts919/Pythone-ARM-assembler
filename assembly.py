@@ -1,4 +1,7 @@
 
+from distutils.version import LooseVersion
+
+
 class Assembler():
 
     def __init__(self,instuctions):
@@ -86,6 +89,11 @@ class Assembler():
                 self.B(command,index)
             if("BX" in command):
                 self.branchEx(command)
+            if("STM" in command):
+                self.blockDataTransfer(command)
+            if("LDM" in command):
+                self.blockDataTransfer(command)
+
 
 
             
@@ -102,7 +110,7 @@ class Assembler():
         con = self.splitCondition(self.conditionCodes[splitCommands[1]])
         # get hex value and assign to either imm4 or imm12
         hexValue = self.hexToBinary(splitCommands[-1],16)
-        hexValue =str(hexValue)  
+        hexValue = str(hexValue)  
         imm4 = hexValue[0:4]       
         imm12 = hexValue[4:16]
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
@@ -123,17 +131,13 @@ class Assembler():
         splitCommands = self.splitCommand(command)
 
         con = self.splitCondition(self.conditionCodes[splitCommands[1]])
-
         # print(splitCommands[-1])
         # get hex value and assign to either imm4 or imm12
         hexValue = self.hexToBinary(splitCommands[-1],16)
         hexValue =str(hexValue)
         
         imm4 = hexValue[0:4]
-        
         imm12 = hexValue[4:16]
-        
-
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
 
         binaryValue = f'{con} 0011 0100 {imm4} {rd} {imm12}'
@@ -144,7 +148,6 @@ class Assembler():
     def dataProcess(self,command):
         con='0000'
         opCode=self.dataProcessing["ADD"]
-        imm4='0000'
         rd='rR'
         rn='rn'
         imm12 ='0000'
@@ -194,6 +197,7 @@ class Assembler():
         rd=""
         imm12='0000 0000 0100'
         prePOST = ''
+        writeback=''
 
         splitCommands = self.splitCommand(command)
         con = self.splitCondition(self.conditionCodes[splitCommands[1]])
@@ -205,12 +209,20 @@ class Assembler():
             LorS = '0'
             prePOST = '0'
 
-        rn = self.getRegisterBinary(splitCommands[3].replace('R',"").replace(",",""))
+        if(splitCommands[3].endswith('!')):
+            # sets write back bit
+            writeback = "1"
+            splitCommands[3].replace('!,',"")
+        else:
+            writeback = "0"
+            splitCommands[2].replace('!','')
+        
+        rn = self.getRegisterBinary(splitCommands[3].replace('R',"").replace('!','').replace(',',''))
         # print("RN " +rn)
-        rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace(",",""))
+        rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace('!','').replace(",",""))
         # print("RD "+rd)
 
-        binaryValue = f'{con} 01{i}{prePOST} 000{LorS} {rn} {rd} {imm12}'
+        binaryValue = f'{con} 01{i}{prePOST} 0{writeback}0{LorS} {rn} {rd} {imm12}'
         byt = self.convertToByteArray(binaryValue)
         
         print(byt)
@@ -226,6 +238,7 @@ class Assembler():
         
         if(splitCommands[2].startswith(':')):
             imm24 = self.getBranchDistance(splitCommands[2],index)
+            print(imm24)
         else:
             imm24 = self.hexToBinary(splitCommands[-1],24)
 
@@ -236,6 +249,7 @@ class Assembler():
         else:
             L="0"
 
+
         # print(imm24) 
         binayrValue = f'{con} 101{L} {imm24}'
         
@@ -243,6 +257,7 @@ class Assembler():
         self.FinalBinary.append(byt)
     
     def branchEx(self,command):
+
         con ="0000"
         rn = '0000'
 
@@ -251,12 +266,46 @@ class Assembler():
         con = self.splitCondition(self.conditionCodes[splitCommands[1]]).zfill(4)
 
         if( splitCommands[-1] == "LR"):
+            print("register 14 hit")
             rn = self.getRegisterBinary("14")
         else:
             rn = self.getRegisterBinary(splitCommands[3].replace('R',"").replace(",",""))
 
         finalyBinary = f'{con} 0001 0010 1111 1111 1111 0001 {rn}'
 
+        byt = self.convertToByteArray(finalyBinary)
+        self.FinalBinary.append(byt)
+
+    def blockDataTransfer(self,command):
+        splitCommands = self.splitCommand(command)
+        con = self.splitCondition(self.conditionCodes[splitCommands[1]]).zfill(4)
+        prePost = ''
+        LorS =''
+        upDown =''
+        writeback=''
+        registers =''
+
+        if(splitCommands[1] == "STM"):
+            prePost = "0"
+            upDown='1'
+            LorS='0'
+            
+        if(splitCommands[1] == "LDM"):
+            prePost = "1"
+            upDown='0'
+            LorS ='1'
+        
+        if(splitCommands[2].endswith('!,')):
+            writeback="1"
+            # splitCommands[2].replace('!,',"")
+
+
+        if(splitCommands[-1] == "1-12"):
+            registers = '0000111111111111'
+
+        Rn = self.getRegisterBinary(splitCommands[2].replace('R',"").replace("!",""))
+
+        finalyBinary = f'{con} 100{prePost} {upDown}1{writeback}{LorS} {Rn} {registers}'
         byt = self.convertToByteArray(finalyBinary)
         self.FinalBinary.append(byt)
 
@@ -319,7 +368,7 @@ class Assembler():
 def main():
     commands =''''''
 
-    with open('commands.txt','r') as command_file:
+    with open('commands2.txt','r') as command_file:
         commands = command_file.read().split("\n")
         print(commands)
 
