@@ -193,7 +193,7 @@ class Assembler():
         LorS =''
         rn=""
         rd=""
-        imm12='0000 0000 0100'
+        imm12='0000 0000 0000'
         prePOST = ''
         writeback=''
 
@@ -207,12 +207,16 @@ class Assembler():
             LorS = '0'
             prePOST = '0'
 
-        if(splitCommands[3].endswith('!')):
+        print(splitCommands)
+        if("!," in splitCommands[3]):
             # sets write back bit
-            print('command has write backbit')
+            # print('command has !, postion 3')
             writeback = "1"
-            splitCommands[3].replace('!,',"")
-            print(splitCommands[3])
+            # print(splitCommands[3])
+        elif("!," in splitCommands[2]):
+            # print('command has !, postion 2')
+            writeback ="1"
+            # print(splitCommands[2])
         else:
             writeback = "0"
             splitCommands[2].replace('!','')
@@ -222,7 +226,8 @@ class Assembler():
         rd = self.getRegisterBinary(splitCommands[2].replace('R',"").replace('!','').replace(",",""))
         # print("RD "+rd)
 
-        binaryValue = f'{con} 01{i}{prePOST} 0{writeback}0{LorS} {rn} {rd} {imm12}'
+        binaryValue = f'{con} 01{i}{prePOST} 00{writeback}{LorS} {rn} {rd} {imm12}'
+        print(binaryValue)
         byt = self.convertToByteArray(binaryValue)
         
         
@@ -241,8 +246,7 @@ class Assembler():
             # print(index)
             # print(splitCommands[-1])
             imm24 = self.getBranchDistance(splitCommands[-1],index)
-            
-            
+
         else:
             
             imm24 = self.hexToBinary(splitCommands[-1],24)
@@ -277,7 +281,7 @@ class Assembler():
             # print("register 14 hit")
             rn = self.getRegisterBinary("14")
         else:
-            rn = self.getRegisterBinary(splitCommands[3].replace('R',"").replace(",",""))
+            rn = self.getRegisterBinary(splitCommands[-1].replace('R',"").replace(",",""))
 
         finalyBinary = f'{con} 0001 0010 1111 1111 1111 0001 {rn}'
 
