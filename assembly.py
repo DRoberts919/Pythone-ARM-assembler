@@ -1,5 +1,7 @@
 
 from distutils.version import LooseVersion
+from math import dist
+from turtle import distance
 
 
 class Assembler():
@@ -60,7 +62,6 @@ class Assembler():
 
     def printInstructions(self):
         for i in self.FinalBinary:
-            print("finally Binary")
             print(i)
             print('\n')
 
@@ -70,7 +71,6 @@ class Assembler():
             
             if(command == "" or command ==' '):
                 continue
-            
             if("MOVW" in command):
                 self.MOVW(command)
             if("MOVT" in command):
@@ -95,8 +95,6 @@ class Assembler():
                 self.blockDataTransfer(command)
 
 
-
-            
 # methods to compile commands into binary
     def MOVW(self,command):
         con='0000';
@@ -211,8 +209,10 @@ class Assembler():
 
         if(splitCommands[3].endswith('!')):
             # sets write back bit
+            print('command has write backbit')
             writeback = "1"
             splitCommands[3].replace('!,',"")
+            print(splitCommands[3])
         else:
             writeback = "0"
             splitCommands[2].replace('!','')
@@ -225,7 +225,7 @@ class Assembler():
         binaryValue = f'{con} 01{i}{prePOST} 0{writeback}0{LorS} {rn} {rd} {imm12}'
         byt = self.convertToByteArray(binaryValue)
         
-        print(byt)
+        
         self.FinalBinary.append(byt)
     
     def B(self,command,index):
@@ -236,10 +236,15 @@ class Assembler():
         splitCommands = self.splitCommand(command)
         # print(splitCommands)
         
-        if(splitCommands[2].startswith(':')):
-            imm24 = self.getBranchDistance(splitCommands[2],index)
-            print(imm24)
+        if(splitCommands[-1].startswith(':')):
+            # print('Label Branch Command')
+            # print(index)
+            # print(splitCommands[-1])
+            imm24 = self.getBranchDistance(splitCommands[-1],index)
+            
+            
         else:
+            
             imm24 = self.hexToBinary(splitCommands[-1],24)
 
         con = self.splitCondition(self.conditionCodes[splitCommands[1]]).zfill(4)
@@ -251,9 +256,12 @@ class Assembler():
 
 
         # print(imm24) 
-        binayrValue = f'{con} 101{L} {imm24}'
+        binaryValue = f'{con} 101{L} {imm24}'
+        # print(f'COMMAND: \n{command}')
+        # print(f'LBIT \n {L}')
+        # print(f'IMM24\n{imm24}')
         
-        byt = self.convertToByteArray(binayrValue)
+        byt = self.convertToByteArray(binaryValue)
         self.FinalBinary.append(byt)
     
     def branchEx(self,command):
@@ -266,7 +274,7 @@ class Assembler():
         con = self.splitCondition(self.conditionCodes[splitCommands[1]]).zfill(4)
 
         if( splitCommands[-1] == "LR"):
-            print("register 14 hit")
+            # print("register 14 hit")
             rn = self.getRegisterBinary("14")
         else:
             rn = self.getRegisterBinary(splitCommands[3].replace('R',"").replace(",",""))
@@ -310,8 +318,6 @@ class Assembler():
         self.FinalBinary.append(byt)
 
 
-
-
 # helper methods for getting info
 
     def splitCommand(slef,command):
@@ -324,13 +330,10 @@ class Assembler():
         return binaryStr[1]
     
     def hexToBinary(self,hexNum,fillVal):
-        # print("hexNum  " + hexNum)
         hexValue =int(hexNum,16)
-        # print("hexValue:  " + str(hexValue))
         binaryValue = hex(hexValue).replace('0x',"")
-        # print(bin(int(binaryValue,16))[2:16].zfill(16))
+        # print(binaryValue)
         value=bin(int(binaryValue,16))[2:]
-        # print(value[0:16].zfill(16))
         return value[0:fillVal].zfill(fillVal)
     
     def getRegisterBinary(self,register):
@@ -348,33 +351,48 @@ class Assembler():
         return byt
     
     def getBranchDistance(self,label,index):
-        decrement = 0
-        subRoutine = 0
-        branch = 0
-
-        for i, command in enumerate(self.instructionSet):
-            if command.startswith(f':{label}') or command == '':
-                decrement += 1
-            if command.startswith(label):
-                subRoutine = (i-decrement) - index
-                branch = subRoutine - 2
-        # print(branch)
-
-        binry = bin(branch)[2:].zfill(24)
+        # decrement = 0
+        # subRoutine = 0
+        # branch = 0
         
-        return binry
+        # for i, command in enumerate(self.instructionSet):
+        #     if command.startswith(f':{label}') or command == '':
+        #         decrement += 1
+        #     if command.startswith(label):
+        #         subRoutine = (i-decrement) - index
+
+        #         branch = subRoutine - 2
+        distance = 0
+        branchLabel = index
+        labelDistance=0
+        for i, command in enumerate(self.instructionSet):
+            if(command == label):
+                # print("label found")
+                labelDistance = i
+
+        distance = (labelDistance - branchLabel) - 2
+
+        distance = bin(distance * -1).replace('0b','').replace('-','').zfill(24)
+
+        # print('\n')
+        # print(f'Branch Lable: {branchLabel}')
+        # print(f'Label Position: {labelDistance}')
+        # print(f'distance {distance}')
+        
+        return distance
+        
 
 
 def main():
     commands =''''''
 
-    with open('commands2.txt','r') as command_file:
+    with open('commandsWithStack.txt','r') as command_file:
         commands = command_file.read().split("\n")
-        print(commands)
+        # print(commands)
 
     assembleBot = Assembler(commands)
     assembleBot.createBinary()
-    print(assembleBot.FinalBinary)
+    # print(assembleBot.FinalBinary)
 
     with open("kernel7.img", "wb") as binary_file:
         for command in assembleBot.FinalBinary:
