@@ -296,28 +296,37 @@ class Assembler():
         upDown =''
         writeback=''
         registers =''
+        print(splitCommands)
 
-        if(splitCommands[1] == "STM"):
+        if(splitCommands[0] == "STM"):
+            # print('STM hit')
             prePost = "0"
             upDown='1'
             LorS='0'
             
-        if(splitCommands[1] == "LDM"):
+        if(splitCommands[0] == "LDM"):
+            # print('LDM hit')
             prePost = "1"
             upDown='0'
             LorS ='1'
         
         if(splitCommands[2].endswith('!,')):
+            print('writeback hit')
             writeback="1"
+            splitCommands[2].replace('!,','')
+        else:
+            writeback="0"
             # splitCommands[2].replace('!,',"")
 
 
         if(splitCommands[-1] == "1-12"):
-            registers = '0000111111111111'
+            print('registers hit 1-12')
+            registers = '0000 1111 1111 1111'
 
-        Rn = self.getRegisterBinary(splitCommands[2].replace('R',"").replace("!",""))
-
-        finalyBinary = f'{con} 100{prePost} {upDown}1{writeback}{LorS} {Rn} {registers}'
+        Rn = self.getRegisterBinary(splitCommands[2].replace('R',"").replace("!,",""))
+        # print('LDM oR STM')
+        finalyBinary = f'{con} 100{prePost} {upDown}0{writeback}{LorS} {Rn} {registers}'
+        # print(finalyBinary)
         byt = self.convertToByteArray(finalyBinary)
         self.FinalBinary.append(byt)
 
@@ -355,17 +364,6 @@ class Assembler():
         return byt
     
     def getBranchDistance(self,label,index):
-        # decrement = 0
-        # subRoutine = 0
-        # branch = 0
-        
-        # for i, command in enumerate(self.instructionSet):
-        #     if command.startswith(f':{label}') or command == '':
-        #         decrement += 1
-        #     if command.startswith(label):
-        #         subRoutine = (i-decrement) - index
-
-        #         branch = subRoutine - 2
         distance = 0
         branchLabel = index
         labelDistance=0
@@ -390,7 +388,7 @@ class Assembler():
 def main():
     commands =''''''
 
-    with open('commandsWithStack.txt','r') as command_file:
+    with open('LoadOrStoreMany.txt','r') as command_file:
         commands = command_file.read().split("\n")
         # print(commands)
 
