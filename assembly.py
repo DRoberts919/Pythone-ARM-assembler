@@ -248,7 +248,7 @@ class Assembler():
             imm24 = self.getBranchDistance(splitCommands[-1],index)
 
         else:
-            
+    
             imm24 = self.hexToBinary(splitCommands[-1],24)
 
         con = self.splitCondition(self.conditionCodes[splitCommands[1]]).zfill(4)
@@ -388,7 +388,7 @@ class Assembler():
 def main():
     commands =''''''
 
-    with open('LoadOrStoreMany.txt','r') as command_file:
+    with open('program.txt','r') as command_file:
         commands = command_file.read().split("\n")
         # print(commands)
 
