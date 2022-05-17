@@ -388,7 +388,7 @@ class Assembler():
 def main():
     commands =''''''
 
-    with open('program.txt','r') as command_file:
+    with open('assembly.txt','r') as command_file:
         commands = command_file.read().split("\n")
         # print(commands)
 
