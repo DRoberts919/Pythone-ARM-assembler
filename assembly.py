@@ -85,7 +85,7 @@ class Assembler():
                 self.dataProcess(command)
             if("SUB" in command):
                 self.dataProcess(command)
-            if("BR" in command):
+            if("BR" in command or "BRL" in command):
                 self.B(command,index)
             if("BX" in command):
                 self.branchEx(command)
@@ -153,9 +153,11 @@ class Assembler():
         s=''
         rpoint = 0
         dpoint = 0
+        hexValue=""
+    
 
         splitCommands = self.splitCommand(command)
-        # print(command)
+        print(command)
 
         if("S" in command):
             s ='1'
@@ -175,8 +177,15 @@ class Assembler():
         rd = self.getRegisterBinary(splitCommands[dpoint].replace('R',"").replace(",",""))
         # print("RD "+rd)
 
-        hexValue = self.hexToBinary(splitCommands[-1],12)
-        hexValue =str(hexValue)
+        if("R" in splitCommands[-1]):
+            immO = "0"
+            value = splitCommands[-1].replace("R","")
+            hexValue = self.hexToBinary(value,12)
+            pass
+        else:
+            hexValue = self.hexToBinary(splitCommands[-1],12)
+            hexValue =str(hexValue)
+            immO = "1"
 
         # print(hexValue)
         imm12 = hexValue
@@ -367,12 +376,15 @@ class Assembler():
         distance = 0
         branchLabel = index
         labelDistance=0
+        otherLabels = 0
         for i, command in enumerate(self.instructionSet):
+            if(":" in command and command != label):
+                otherLabels += 1
             if(command == label):
                 # print("label found")
                 labelDistance = i
 
-        distance = (labelDistance - branchLabel) - 2
+        distance = ((labelDistance-otherLabels) - branchLabel) - 2
 
         distance = bin(distance * -1).replace('0b','').replace('-','').zfill(24)
 
