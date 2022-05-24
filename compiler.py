@@ -59,9 +59,15 @@ BX AL R14
         return myCode
 
 
+    def addition(self,data):
+        pass
+    
+    def subtract(self,data):
+        pass
+
+
 def main():
     
-
     with open('program.txt','r') as command_file:
         commands = command_file.read()
         # print(commands)
